@@ -1,0 +1,157 @@
+" Debugging Tips ========================================================
+"
+" List your scripts:
+"    :scriptnames
+"
+" Run VIM without any scripts:
+"     $ gvim -u NONE -U NONE
+"
+" Source plugins individually:
+"     :so path/to/script
+"
+":set verbose=15
+":set verbosefile=/tmp/vimrc3.txt
+
+" Enable Pathogen =======================================================
+"   Pathogen is vim's package manager.
+:execute pathogen#infect()
+
+" Ctrl-P Configuration ==================================================
+:set runtimepath^=~/.vim/bundle/ctrlp.vim
+
+" Get project files by using git:
+:let g:ctrlp_user_command=['.git', 'cd %s && git ls-files']
+
+" Enable ctrl-p to use ctags:
+:let g:ctrlp_extensions = ['tag']
+
+" Global Configs ========================================================
+"    Settings for all files.
+
+" Enable highlight search to highlight all the matches:
+:set hlsearch
+
+" Perform incremental searching as the search pattern is entered:
+:set incsearch
+
+" Enable the 'peachpuff' color scheme (one of the default color schemes):
+:colorscheme peachpuff
+
+
+" Enable Vim file type detection.
+"    This will permit 'FileType' autocmd events to trigger.
+:filetype on
+
+" Enable syntax highlighting.
+"    Note: On debian systems this is automatically set for you in
+"    /usr/share/vim/vimrc.
+"
+"    Note: Setting syntax on will also automatically set filetype on.
+:syntax on
+
+" Copy, Cut, and Paste to the CLIPBOARD buffer (+)
+:noremap <F1> "+y
+:noremap <F2> "+d
+:noremap <F3> "+p
+
+:set omnifunc=syntaxcomplete#Complete
+
+" Project Configuration ===================================================
+"       To permit different settings for different coding projects.
+
+" HDM Project:
+function! s:HdmConfig(path)
+    if a:path =~ 'src/\(HDM\|hdm\)'
+
+        " Call the defaults:
+        call s:DefaultConfig(a:path)
+
+        return 1
+    endif
+endfunction
+
+" Default Config:
+function! s:DefaultConfig(path)
+
+    " Enable automatic C program indenting:
+    set cindent
+
+    " Controls automatic C indentation:
+    "    :0  - Place case labels on the same indent as the switch.
+    "    (0  - When in unclosed parentheses, line up with next non-white after
+    "          the unclosed parentheses.
+    "    l1  - Always align with the case label instead of the statement after
+    "          it on the same line.
+    "    t0  - Indent a function return type declaration 0 characters from the
+    "          margin.
+    set cinoptions=:0,(0,l1,t0
+
+    " How automatic formatting is done (see :help fo-table):
+    "    c  : Auto-wrap comments using textwidth, inserting the current comment
+    "         leader automatically.
+    "    q  : Allow formatting of comments with "gq".
+    set formatoptions=cq
+
+    " Maximum width of text that is being inserted.  Longer lines will be
+    " broken up.
+    set textwidth=45
+
+    " What character to show wrapped lines of text:
+    set showbreak=>
+
+    "set lines=30
+
+    " Tells VIM how many columns a tab character counts for:
+    set tabstop=4
+
+    " How many columns to indent code with the reindent operations (<< and >>)
+    " and automatic C-style indentation.
+    set shiftwidth=4
+
+    " Insert spaces when <Tab> is pressed:
+    set expandtab
+
+    highlight RedundantSpaces ctermbg=red guibg=red
+    match RedundantSpaces /\s\+$\| \+\ze\t/
+
+    return 1
+endfunction
+
+:let g:Configs = [ function("s:HdmConfig"), function("s:DefaultConfig") ]
+
+function! s:ProjectConfigure()
+    let path = expand('%:p')
+    for Fn in g:Configs
+        if Fn(path)
+            break
+        endif
+    endfor
+endfunction
+
+" Invoke ProjectConfigure() for all C/C++ files (and header files)
+:autocmd FileType c,cpp call s:ProjectConfigure()
+
+" Git + Ctags =============================================================
+
+" GitHandle()
+"
+"  This defines a 'vimscript' function that tests if we're inside a git
+"  repository and then adds '.../.git/tags' to the end of the 'tags' option.
+"
+"  Recall that tags are used for things like tag jumping and omni completion.
+function! GitHandle()
+    if system("git rev-parse --is-inside-work-tree") ==? "true\n"
+        let s:res = system("git rev-parse --show-toplevel")
+        let s:res = substitute(s:res, '\n$', '', '')
+        let &tags = &tags . "," . s:res . "/.git/tags"
+    endif
+endfunction
+
+" Call the GitHandle function.
+:call GitHandle()
+
+" Stretch the default vim window to 45 rows and 80 columns
+:set lines=40
+:set columns=80
+
+:set path=$PWD/**
